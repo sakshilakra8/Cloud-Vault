@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: shardvault-api
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/shardvault}
+    username: ${SPRING_DATASOURCE_USERNAME:shardvault}
+    password: ${SPRING_DATASOURCE_PASSWORD:change-me}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: ${SHARDVAULT_MAX_FILE_SIZE:10GB}
+      max-request-size: ${SHARDVAULT_MAX_REQUEST_SIZE:10GB}
+      file-size-threshold: 0
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+shardvault:
+  chunk-size-bytes: ${SHARDVAULT_CHUNK_SIZE_BYTES:4194304}
+  upload-part-size-bytes: ${SHARDVAULT_UPLOAD_PART_SIZE_BYTES:4194304}
+  local-provider-root: ${SHARDVAULT_LOCAL_PROVIDER_ROOT:./data/local-provider}
+  default-provider-id: ${SHARDVAULT_DEFAULT_PROVIDER_ID:local-dev}
+  master-key-b64: ${MASTER_KEY_B64:}
+  master-key-b64-v1: ${MASTER_KEY_B64_V1:}
+  cleanup:
+    abandoned-after: ${SHARDVAULT_UPLOAD_ABANDONED_AFTER:PT24H}
+    fixed-delay: ${SHARDVAULT_CLEANUP_FIXED_DELAY:PT15M}
+  security:
+    jwt:
+      secret: ${JWT_SECRET:c2hhcmR2YXVsdC1zdXBlci1zZWNyZXQtand0LWtleS1mb3Itc2lnbmluZy0yNTZiaXQ=}
+      access-token-expiration-seconds: ${JWT_ACCESS_EXPIRATION_SECONDS:900}
+      refresh-token-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:604800}
+    cookie:
+      secure: ${AUTH_COOKIE_SECURE:false}
+      same-site: Strict
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+    lockout:
+      max-failed-attempts: ${AUTH_MAX_FAILED_ATTEMPTS:5}
+      lockout-duration-minutes: ${AUTH_LOCKOUT_DURATION_MINUTES:15}
+    rate-limit:
+      auth-per-ip-limit: ${RATE_LIMIT_AUTH_PER_IP:5}
+      auth-per-ip-duration-seconds: 60
+      api-per-user-limit: ${RATE_LIMIT_API_PER_USER:60}
+      api-per-user-duration-seconds: 60
