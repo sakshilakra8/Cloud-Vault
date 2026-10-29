@@ -1,0 +1,18 @@
+ALTER TABLE files ADD COLUMN IF NOT EXISTS replication_state VARCHAR(16) NOT NULL DEFAULT 'HEALTHY';
+ALTER TABLE files ALTER COLUMN replication_policy SET DEFAULT 'STANDARD';
+ALTER TABLE chunk_replicas ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT 'HEALTHY';
+
+CREATE TABLE IF NOT EXISTS storage_jobs (
+    id UUID PRIMARY KEY,
+    job_type VARCHAR(24) NOT NULL,
+    chunk_id UUID NOT NULL REFERENCES chunks(id) ON DELETE CASCADE,
+    status VARCHAR(16) NOT NULL DEFAULT 'PENDING',
+    attempts INT NOT NULL DEFAULT 0,
+    available_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    locked_at TIMESTAMP WITH TIME ZONE,
+    last_error VARCHAR(1024),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+CREATE INDEX IF NOT EXISTS idx_storage_jobs_ready ON storage_jobs(status, available_at, created_at);
+CREATE INDEX IF NOT EXISTS idx_storage_jobs_chunk ON storage_jobs(chunk_id, job_type);

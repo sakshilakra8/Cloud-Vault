@@ -21,12 +21,13 @@ public final class LocalFsProvider implements StorageProvider {
 
     public LocalFsProvider(String id, Path root, ProviderLimits limits) {
         this.id = id;
-        this.root = root.toAbsolutePath().normalize();
         this.limits = limits;
         try {
-            Files.createDirectories(this.root);
+            Path configuredRoot = root.toAbsolutePath().normalize();
+            Files.createDirectories(configuredRoot);
+            this.root = configuredRoot.toRealPath();
         } catch (IOException ex) {
-            throw new ProviderConfigurationException("Unable to create local provider root " + this.root, ex);
+            throw new ProviderConfigurationException("Unable to create local provider root", ex);
         }
     }
 
@@ -108,9 +109,19 @@ public final class LocalFsProvider implements StorageProvider {
         if (objectKey == null || objectKey.isBlank()) {
             throw new ProviderConfigurationException("objectKey must not be blank");
         }
-        Path resolved = root.resolve(objectKey).normalize();
+        Path key = Path.of(objectKey);
+        if (key.isAbsolute() || java.util.Arrays.stream(objectKey.replace('\\', '/').split("/"))
+                .anyMatch(segment -> segment.isBlank() || segment.equals(".") || segment.equals(".."))) {
+            throw new ProviderConfigurationException("objectKey contains an invalid path segment");
+        }
+        Path resolved = root.resolve(key).normalize();
         if (!resolved.startsWith(root)) {
-            throw new ProviderConfigurationException("objectKey escapes provider root: " + objectKey);
+            throw new ProviderConfigurationException("objectKey escapes provider root");
+        }
+        Path cursor = root;
+        for (Path segment : root.relativize(resolved)) {
+            cursor = cursor.resolve(segment);
+            if (Files.isSymbolicLink(cursor)) throw new ProviderConfigurationException("Symbolic links are not valid object paths");
         }
         return resolved;
     }

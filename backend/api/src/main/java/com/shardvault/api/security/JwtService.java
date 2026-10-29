@@ -23,27 +23,25 @@ public class JwtService {
     private final long refreshTokenExpirationSeconds;
 
     public JwtService(
-            @Value("${shardvault.security.jwt.secret:c2hhcmR2YXVsdC1zdXBlci1zZWNyZXQtand0LWtleS1mb3Itc2lnbmluZy0yNTZiaXQ=}") String secret,
+            @Value("${shardvault.security.jwt.secret:${JWT_SECRET:}}") String secret,
             @Value("${shardvault.security.jwt.access-token-expiration-seconds:900}") long accessTokenExpirationSeconds,
             @Value("${shardvault.security.jwt.refresh-token-expiration-seconds:604800}") long refreshTokenExpirationSeconds) {
         this.accessTokenExpirationSeconds = accessTokenExpirationSeconds;
         this.refreshTokenExpirationSeconds = refreshTokenExpirationSeconds;
 
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET must be configured with at least 256 bits of key material");
+        }
         byte[] keyBytes;
         try {
             keyBytes = Base64.getDecoder().decode(secret);
-            if (keyBytes.length < 32) {
-                // If decoded key is too short, pad or fallback to utf-8 bytes
-                keyBytes = secret.getBytes(StandardCharsets.UTF_8);
-            }
+            if (keyBytes.length < 32) keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         } catch (IllegalArgumentException e) {
             keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         }
 
         if (keyBytes.length < 32) {
-            byte[] padded = new byte[32];
-            System.arraycopy(keyBytes, 0, padded, 0, Math.min(keyBytes.length, 32));
-            keyBytes = padded;
+            throw new IllegalStateException("JWT_SECRET must contain at least 256 bits of key material");
         }
 
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
@@ -73,7 +71,7 @@ public class JwtService {
         } catch (ExpiredJwtException e) {
             throw new InvalidTokenException("Access token has expired");
         } catch (JwtException | IllegalArgumentException e) {
-            throw new InvalidTokenException("Invalid or malformed access token: " + e.getMessage());
+            throw new InvalidTokenException("Invalid or malformed access token");
         }
     }
 

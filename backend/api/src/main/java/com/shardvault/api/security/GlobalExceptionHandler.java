@@ -4,6 +4,7 @@ import com.shardvault.api.exception.AccountLockedException;
 import com.shardvault.api.exception.InvalidTokenException;
 import com.shardvault.api.exception.RateLimitExceededException;
 import com.shardvault.api.exception.TokenReuseException;
+import com.shardvault.api.service.QuotaExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.net.URI;
@@ -130,6 +132,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .body(problem);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ProblemDetail> handleResponseStatus(ResponseStatusException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        ProblemDetail problem = buildProblemDetail(status, ex.getReason() == null ? status.getReasonPhrase() : ex.getReason(), request);
+        problem.setTitle(status.getReasonPhrase());
+        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_PROBLEM_JSON).body(problem);
+    }
+
+    @ExceptionHandler(QuotaExceededException.class)
+    public ResponseEntity<ProblemDetail> handleQuotaExceeded(QuotaExceededException ex, HttpServletRequest request) {
+        ProblemDetail problem = buildProblemDetail(HttpStatus.INSUFFICIENT_STORAGE, "Storage quota exceeded", request);
+        problem.setTitle("Storage Quota Exceeded");
+        return ResponseEntity.status(HttpStatus.INSUFFICIENT_STORAGE).contentType(MediaType.APPLICATION_PROBLEM_JSON).body(problem);
     }
 
     @ExceptionHandler(Exception.class)

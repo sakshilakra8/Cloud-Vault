@@ -20,6 +20,8 @@ public final class EnvironmentProviderConfigResolver implements ProviderConfigRe
         copy(prefix, "ACCESS_KEY_ID", "accessKeyId", values);
         copy(prefix, "SECRET_ACCESS_KEY", "secretAccessKey", values);
         copy(prefix, "RATE_LIMIT_HINT", "rateLimitHint", values);
+        copy(prefix, "CHAT_ID", "chatId", values);
+        copy(prefix, "BOT_TOKEN", "botToken", values);
         return new ProviderConfig(values);
     }
 

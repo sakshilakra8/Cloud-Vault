@@ -49,6 +49,9 @@ public final class ReliableStorageProvider implements StorageProvider, AutoClose
     }
 
     @Override
+    public ReliabilityTier reliability() { return delegate.reliability(); }
+
+    @Override
     public void put(String objectKey, InputStream data, long length) {
         if (data.markSupported()) {
             data.mark(Integer.MAX_VALUE);
@@ -65,6 +68,24 @@ public final class ReliableStorageProvider implements StorageProvider, AutoClose
             delegate.put(objectKey, data, length);
             return null;
         });
+    }
+
+    @Override
+    public String putAndGetKey(String objectKey, InputStream data, long length) {
+        if (data.markSupported()) {
+            data.mark(Integer.MAX_VALUE);
+            return runWithRetry("put " + objectKey, () -> {
+                data.reset();
+                return delegate instanceof ReliableStorageProvider reliable
+                        ? reliable.putAndGetKey(objectKey, data, length)
+                        : putAndGetKey(delegate, objectKey, data, length);
+            });
+        }
+        return callBounded("put " + objectKey, () -> putAndGetKey(delegate, objectKey, data, length));
+    }
+
+    private static String putAndGetKey(StorageProvider provider, String objectKey, InputStream data, long length) {
+        return provider.putAndGetKey(objectKey, data, length);
     }
 
     @Override

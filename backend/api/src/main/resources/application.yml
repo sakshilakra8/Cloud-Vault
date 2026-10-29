@@ -18,12 +18,23 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
 shardvault:
   chunk-size-bytes: ${SHARDVAULT_CHUNK_SIZE_BYTES:4194304}
   upload-part-size-bytes: ${SHARDVAULT_UPLOAD_PART_SIZE_BYTES:4194304}
   local-provider-root: ${SHARDVAULT_LOCAL_PROVIDER_ROOT:./data/local-provider}
   default-provider-id: ${SHARDVAULT_DEFAULT_PROVIDER_ID:local-dev}
+  routing:
+    weights:
+      reliability: ${ROUTING_WEIGHT_RELIABILITY:0.40}
+      speed: ${ROUTING_WEIGHT_SPEED:0.25}
+      free-space: ${ROUTING_WEIGHT_FREE_SPACE:0.20}
+      cost: ${ROUTING_WEIGHT_COST:0.15}
   master-key-b64: ${MASTER_KEY_B64:}
   master-key-b64-v1: ${MASTER_KEY_B64_V1:}
   cleanup:
@@ -31,17 +42,18 @@ shardvault:
     fixed-delay: ${SHARDVAULT_CLEANUP_FIXED_DELAY:PT15M}
   security:
     jwt:
-      secret: ${JWT_SECRET:c2hhcmR2YXVsdC1zdXBlci1zZWNyZXQtand0LWtleS1mb3Itc2lnbmluZy0yNTZiaXQ=}
+      secret: ${JWT_SECRET:}
       access-token-expiration-seconds: ${JWT_ACCESS_EXPIRATION_SECONDS:900}
       refresh-token-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:604800}
     cookie:
-      secure: ${AUTH_COOKIE_SECURE:false}
+      secure: ${AUTH_COOKIE_SECURE:true}
       same-site: Strict
     cors:
-      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:}
     lockout:
       max-failed-attempts: ${AUTH_MAX_FAILED_ATTEMPTS:5}
       lockout-duration-minutes: ${AUTH_LOCKOUT_DURATION_MINUTES:15}
+      max-duration-minutes: ${AUTH_LOCKOUT_MAX_DURATION_MINUTES:1440}
     rate-limit:
       auth-per-ip-limit: ${RATE_LIMIT_AUTH_PER_IP:5}
       auth-per-ip-duration-seconds: 60

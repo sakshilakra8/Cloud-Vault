@@ -43,11 +43,17 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        String path = request.getRequestURI();
+        String path = request.getServletPath();
         String clientIp = extractClientIp(request);
 
         if (AUTH_ENDPOINTS.contains(path)) {
             var decision = rateLimiterService.tryConsumeAuth(clientIp);
+            if (!decision.allowed()) {
+                sendRateLimitResponse(request, response, decision.retryAfterSeconds());
+                return;
+            }
+        } else if (path.startsWith("/s/")) {
+            var decision = rateLimiterService.tryConsumeApi("share-ip:" + clientIp);
             if (!decision.allowed()) {
                 sendRateLimitResponse(request, response, decision.retryAfterSeconds());
                 return;
@@ -89,10 +95,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private String extractClientIp(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
+        // Forwarded headers are client supplied unless a separately configured trusted proxy rewrites them.
         return request.getRemoteAddr() != null ? request.getRemoteAddr() : "127.0.0.1";
     }
 }

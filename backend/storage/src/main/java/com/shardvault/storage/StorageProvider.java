@@ -8,7 +8,15 @@ public interface StorageProvider {
 
     ProviderType type();
 
+    default ReliabilityTier reliability() { return ReliabilityTier.NORMAL; }
+
     void put(String objectKey, InputStream data, long length);
+
+    /** Stores an object and returns its durable provider key when the backend assigns one. */
+    default String putAndGetKey(String objectKey, InputStream data, long length) {
+        put(objectKey, data, length);
+        return objectKey;
+    }
 
     InputStream get(String objectKey);
 

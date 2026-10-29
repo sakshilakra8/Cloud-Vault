@@ -1,0 +1,22 @@
+ALTER TABLE share_links ADD COLUMN IF NOT EXISTS max_downloads INT;
+ALTER TABLE share_links ADD COLUMN IF NOT EXISTS download_count INT NOT NULL DEFAULT 0;
+ALTER TABLE share_links ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE share_links ADD COLUMN IF NOT EXISTS revoked BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE share_links ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_share_token_hash ON share_links(token_hash);
+
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS ip_address VARCHAR(64);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS user_agent VARCHAR(512);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS resource_type VARCHAR(24);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS resource_id VARCHAR(64);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS result VARCHAR(16);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at DESC);
+
+CREATE TABLE IF NOT EXISTS user_quotas (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    quota_bytes BIGINT NOT NULL,
+    used_bytes BIGINT NOT NULL DEFAULT 0,
+    reserved_bytes BIGINT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT user_quotas_nonnegative CHECK (quota_bytes >= 0 AND used_bytes >= 0 AND reserved_bytes >= 0)
+);

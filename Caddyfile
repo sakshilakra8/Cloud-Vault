@@ -1,0 +1,6 @@
+{$DOMAIN} {
+	encode zstd gzip
+	@actuator path /actuator/*
+	respond @actuator 404
+	reverse_proxy api:8080
+}

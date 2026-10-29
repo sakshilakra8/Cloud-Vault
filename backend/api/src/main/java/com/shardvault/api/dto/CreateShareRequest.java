@@ -2,6 +2,8 @@ package com.shardvault.api.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 
@@ -16,5 +18,9 @@ public record CreateShareRequest(
         @Pattern(regexp = "^(READ|WRITE)$", message = "Permission must be READ or WRITE")
         String permission,
 
-        Instant expiresAt
+        Instant expiresAt,
+
+        @Positive Integer maxDownloads,
+
+        @Size(min = 8, max = 128) String password
 ) {}

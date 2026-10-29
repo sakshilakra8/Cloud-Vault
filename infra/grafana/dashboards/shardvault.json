@@ -1,0 +1,13 @@
+{
+  "title": "ShardVault Operations",
+  "uid": "shardvault-ops",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {"id": 1, "type": "timeseries", "title": "Verified download throughput (bytes/sec)", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}, "targets": [{"expr": "rate(shardvault_download_bytes_total[5m])", "legendFormat": "downloads"}]},
+    {"id": 2, "type": "timeseries", "title": "Provider EWMA latency (ms)", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}, "targets": [{"expr": "shardvault_storage_provider_ewma_latency", "legendFormat": "{{provider_id}}"}]},
+    {"id": 3, "type": "timeseries", "title": "Provider rolling error rate", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}, "targets": [{"expr": "shardvault_storage_provider_error_rate", "legendFormat": "{{provider_id}}"}]},
+    {"id": 4, "type": "timeseries", "title": "Replication queue depth", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}, "targets": [{"expr": "shardvault_replication_queue_depth", "legendFormat": "queued"}]}
+  ]
+}

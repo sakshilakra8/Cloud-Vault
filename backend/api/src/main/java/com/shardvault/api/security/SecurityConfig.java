@@ -39,7 +39,7 @@ public class SecurityConfig {
     private final RateLimitingFilter rateLimitingFilter;
     private final ObjectMapper objectMapper;
 
-    @Value("${shardvault.security.cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
+    @Value("${shardvault.security.cors.allowed-origins:${CORS_ALLOWED_ORIGINS:}}")
     private String allowedOrigins;
 
     @Value("${shardvault.security.argon2.salt-length:16}")
@@ -98,11 +98,8 @@ public class SecurityConfig {
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/v1/auth/register",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/refresh"
-                        ).permitAll()
+                        .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
+                        .requestMatchers("/s/**").permitAll()
                         .requestMatchers(
                                 "/api/v1/shares/public/**"
                         ).permitAll()
@@ -110,6 +107,7 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/actuator/health/**"
                         ).permitAll()
+                        .requestMatchers("/actuator/prometheus").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
@@ -148,13 +146,10 @@ public class SecurityConfig {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
 
-            String detail = "Authentication is required to access this resource";
-            Object attr = request.getAttribute("jwt_auth_exception");
-            if (attr != null) {
-                detail = attr.toString();
-            }
-
-            ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, detail);
+            ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                    HttpStatus.UNAUTHORIZED,
+                    "Authentication is required to access this resource"
+            );
             problem.setTitle("Unauthorized");
             problem.setInstance(URI.create(request.getRequestURI()));
             problem.setProperty("timestamp", Instant.now().toString());

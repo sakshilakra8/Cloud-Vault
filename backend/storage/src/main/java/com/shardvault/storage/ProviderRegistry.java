@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class ProviderRegistry {
     private static final String ENABLED_PROVIDERS_SQL = """
@@ -20,6 +22,7 @@ public final class ProviderRegistry {
     private final DataSource dataSource;
     private final ProviderConfigResolver configResolver;
     private final ReliabilityConfig reliabilityConfig;
+    private final Map<String, ProviderTelemetry> telemetry = new ConcurrentHashMap<>();
 
     public ProviderRegistry(DataSource dataSource) {
         this(dataSource, new EnvironmentProviderConfigResolver(), ReliabilityConfig.defaults());
@@ -37,12 +40,41 @@ public final class ProviderRegistry {
              var statement = connection.prepareStatement(ENABLED_PROVIDERS_SQL);
              var resultSet = statement.executeQuery()) {
             while (resultSet.next()) {
-                providers.add(new ReliableStorageProvider(toProvider(row(resultSet)), reliabilityConfig));
+                StorageProvider provider = toProvider(row(resultSet));
+                providers.add(new ReliableStorageProvider(new MonitoredStorageProvider(provider, telemetry(provider.id())), reliabilityConfig));
             }
             return List.copyOf(providers);
         } catch (SQLException ex) {
             throw new ProviderConfigurationException("Failed to load providers from database", ex);
         }
+    }
+
+    public Optional<StorageProvider> loadProvider(String id) {
+        String sql = "select id, type, config_ref, max_chunk_bytes, max_object_bytes from providers where id = ?";
+        try (var connection = dataSource.getConnection(); var statement = connection.prepareStatement(sql)) {
+            statement.setString(1, id);
+            try (var resultSet = statement.executeQuery()) {
+                if (!resultSet.next()) return Optional.empty();
+                StorageProvider provider = toProvider(row(resultSet));
+                return Optional.of(new ReliableStorageProvider(new MonitoredStorageProvider(provider, telemetry(provider.id())), reliabilityConfig));
+            }
+        } catch (SQLException ex) {
+            throw new ProviderConfigurationException("Failed to load provider " + id, ex);
+        }
+    }
+
+    public Map<String, ProviderTelemetry> telemetrySnapshot() { return Map.copyOf(telemetry); }
+
+    public void initializeTelemetry(Iterable<String> providerIds) {
+        providerIds.forEach(this::telemetry);
+    }
+
+    public StorageRouter router(StorageRouter.Weights weights, Map<String, Double> costs) {
+        return new StorageRouter(weights, telemetry, costs);
+    }
+
+    private ProviderTelemetry telemetry(String id) {
+        return telemetry.computeIfAbsent(id, key -> new ProviderTelemetry(key, 5, java.time.Duration.ofSeconds(30)));
     }
 
     private StorageProvider toProvider(ProviderRow row) {
@@ -55,7 +87,7 @@ public final class ProviderRegistry {
         ProviderType type = ProviderType.valueOf(row.type().toUpperCase(Locale.ROOT));
         return switch (type) {
             case LOCAL_FS -> new LocalFsProvider(row.id(), Path.of(config.require("root")), limits);
-            case S3_COMPATIBLE -> new S3CompatibleProvider(new S3CompatibleProviderConfig(
+            case S3_COMPATIBLE, BACKBLAZE_B2, CLOUDFLARE_R2 -> new S3CompatibleProvider(new S3CompatibleProviderConfig(
                     row.id(),
                     config.uri("endpointOverride"),
                     config.require("region"),
@@ -63,7 +95,9 @@ public final class ProviderRegistry {
                     config.bool("pathStyleAccess", true),
                     config.require("accessKeyId"),
                     config.require("secretAccessKey"),
-                    limits));
+                    limits), type);
+            case GCS -> new GcsProvider(row.id(), config.require("bucket"), limits);
+            case TELEGRAM_BOT -> new TelegramBotProvider(row.id(), config.require("botToken"), config.require("chatId"), limits);
         };
     }
 

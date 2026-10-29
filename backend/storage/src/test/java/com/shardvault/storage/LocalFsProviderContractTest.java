@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LocalFsProviderContractTest extends StorageProviderContractTest {
     @TempDir
@@ -33,5 +34,11 @@ class LocalFsProviderContractTest extends StorageProviderContractTest {
     @Override
     protected String runId() {
         return runId;
+    }
+
+    @org.junit.jupiter.api.Test
+    void rejectsTraversalObjectKeys() {
+        assertThrows(ProviderConfigurationException.class, () -> provider.put("../outside", new java.io.ByteArrayInputStream(new byte[0]), 0));
+        assertThrows(ProviderConfigurationException.class, () -> provider.exists("contract/../../outside"));
     }
 }

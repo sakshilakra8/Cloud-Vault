@@ -25,17 +25,30 @@ import java.util.Optional;
 public final class S3CompatibleProvider implements StorageProvider, AutoCloseable {
     private final String id;
     private final String bucket;
+    private final ProviderType type;
     private final ProviderLimits limits;
     private final S3Client s3;
 
     public S3CompatibleProvider(S3CompatibleProviderConfig config) {
-        this(config, buildClient(config));
+        this(config, ProviderType.S3_COMPATIBLE, buildClient(config));
+    }
+
+    public S3CompatibleProvider(S3CompatibleProviderConfig config, ProviderType type) {
+        this(config, type, buildClient(config));
     }
 
     public S3CompatibleProvider(S3CompatibleProviderConfig config, S3Client s3) {
+        this(config, ProviderType.S3_COMPATIBLE, s3);
+    }
+
+    public S3CompatibleProvider(S3CompatibleProviderConfig config, ProviderType type, S3Client s3) {
+        if (type != ProviderType.S3_COMPATIBLE && type != ProviderType.BACKBLAZE_B2 && type != ProviderType.CLOUDFLARE_R2) {
+            throw new IllegalArgumentException("S3 provider type must be S3_COMPATIBLE, BACKBLAZE_B2, or CLOUDFLARE_R2");
+        }
         this.id = config.id();
         this.bucket = config.bucket();
         this.limits = config.limits();
+        this.type = type;
         this.s3 = s3;
     }
 
@@ -46,7 +59,7 @@ public final class S3CompatibleProvider implements StorageProvider, AutoCloseabl
 
     @Override
     public ProviderType type() {
-        return ProviderType.S3_COMPATIBLE;
+        return type;
     }
 
     @Override

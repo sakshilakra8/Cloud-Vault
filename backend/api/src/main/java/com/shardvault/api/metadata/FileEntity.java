@@ -27,7 +27,8 @@ public class FileEntity {
     public int kekVersion = 1;
     @Column(columnDefinition = "bytea")
     public byte[] plaintextSha256;
-    public String replicationPolicy = "single";
+    public String replicationPolicy = "STANDARD";
+    public String replicationState = "HEALTHY";
     public UUID thumbnailFileId;
     public Instant deletedAt;
     public Instant createdAt = Instant.now();

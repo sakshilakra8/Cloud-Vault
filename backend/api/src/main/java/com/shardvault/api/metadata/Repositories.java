@@ -63,5 +63,8 @@ interface UploadPartRepository extends JpaRepository<UploadPartEntity, UUID> {
 interface ShareLinkRepository extends JpaRepository<ShareLinkEntity, UUID> {
 }
 
-interface AuditLogRepository extends JpaRepository<AuditLogEntity, UUID> {
+interface AuditLogRepository extends org.springframework.data.repository.Repository<AuditLogEntity, UUID> {
+    AuditLogEntity save(AuditLogEntity entity);
+    Optional<AuditLogEntity> findById(UUID id);
+    Page<AuditLogEntity> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 }

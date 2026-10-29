@@ -8,6 +8,7 @@ import com.shardvault.storage.StorageProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import javax.crypto.SecretKey;
 import java.nio.file.Path;
@@ -15,6 +16,7 @@ import java.time.Duration;
 import java.util.Map;
 
 @Configuration
+@Profile("legacy-pipeline")
 class PipelineConfig {
     @Bean
     EnvelopeCryptoService envelopeCryptoService(

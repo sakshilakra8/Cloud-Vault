@@ -43,6 +43,7 @@ public class AuthService {
     private final String cookieSameSite;
     private final int maxFailedAttempts;
     private final int lockoutDurationMinutes;
+    private final int lockoutMaxDurationMinutes;
     private final String dummyPasswordHash;
 
     private final SecureRandom secureRandom = new SecureRandom();
@@ -54,10 +55,11 @@ public class AuthService {
             RefreshTokenRepository refreshTokenRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
-            @Value("${shardvault.security.cookie.secure:false}") boolean cookieSecure,
+            @Value("${shardvault.security.cookie.secure:true}") boolean cookieSecure,
             @Value("${shardvault.security.cookie.same-site:Strict}") String cookieSameSite,
             @Value("${shardvault.security.lockout.max-failed-attempts:5}") int maxFailedAttempts,
-            @Value("${shardvault.security.lockout.lockout-duration-minutes:15}") int lockoutDurationMinutes) {
+            @Value("${shardvault.security.lockout.lockout-duration-minutes:15}") int lockoutDurationMinutes,
+            @Value("${shardvault.security.lockout.max-duration-minutes:1440}") int lockoutMaxDurationMinutes) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
@@ -66,6 +68,7 @@ public class AuthService {
         this.cookieSameSite = cookieSameSite;
         this.maxFailedAttempts = maxFailedAttempts;
         this.lockoutDurationMinutes = lockoutDurationMinutes;
+        this.lockoutMaxDurationMinutes = lockoutMaxDurationMinutes;
         this.dummyPasswordHash = passwordEncoder.encode("dummy-password-for-timing-safety-1234");
     }
 
@@ -107,11 +110,13 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             int attempts = user.getFailedLoginAttempts() + 1;
-            user.setFailedLoginAttempts(attempts);
+            Instant lockoutUntil = null;
             if (attempts >= maxFailedAttempts) {
-                user.setLockoutUntil(Instant.now().plus(Duration.ofMinutes(lockoutDurationMinutes)));
+                int exponent = Math.min(20, attempts - maxFailedAttempts);
+                long delay = Math.min(lockoutMaxDurationMinutes, (long) lockoutDurationMinutes << exponent);
+                lockoutUntil = Instant.now().plus(Duration.ofMinutes(delay));
             }
-            userRepository.save(user);
+            userRepository.recordFailedLogin(user.getId(), attempts, lockoutUntil);
             throw new BadCredentialsException("Invalid email or password");
         }
 
@@ -140,8 +145,7 @@ public class AuthService {
 
         // Check for refresh token reuse
         if (tokenEntity.isRevoked()) {
-            // Revoke the entire family
-            refreshTokenRepository.revokeFamily(tokenEntity.getFamilyId());
+            revokeFamily(tokenEntity.getFamilyId());
             throw new TokenReuseException("Refresh token reuse detected. Token family has been revoked.");
         }
 
@@ -181,6 +185,11 @@ public class AuthService {
         );
 
         return new AuthResult(authResponse, cookie);
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void revokeFamily(String familyId) {
+        refreshTokenRepository.revokeFamily(familyId);
     }
 
     @Transactional
