@@ -33,6 +33,11 @@ public class ShareController {
                                 @Positive Integer maxDownloads,
                                 @jakarta.validation.constraints.Size(min = 8, max = 128) String password) {}
 
+    @GetMapping("/api/v1/shares/file/{fileId}")
+    public List<java.util.Map<String, Object>> listForFile(@PathVariable UUID fileId, Authentication auth) {
+        return jdbc.queryForList("select s.id, s.expires_at, s.max_downloads, s.download_count, s.revoked, (s.password_hash is not null) as password_protected from share_links s join files f on f.id=s.file_id where s.file_id=? and f.user_id=? order by s.created_at desc", fileId, userId(auth));
+    }
+
     @PostMapping("/api/v1/shares")
     public ResponseEntity<ShareService.CreatedShare> create(@Valid @RequestBody CreateRequest request,
                                                              Authentication auth, HttpServletRequest http) {

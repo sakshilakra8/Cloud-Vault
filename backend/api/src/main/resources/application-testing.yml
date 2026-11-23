@@ -1,0 +1,12 @@
+shardvault:
+  master-key-b64: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+  security:
+    jwt:
+      secret: c2hhcmR2YXVsdC1zdXBlci1zZWNyZXQtand0LWtleS1mb3Itc2lnbmluZy0yNTZiaXQ=
+    cookie:
+      secure: false
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true

@@ -27,6 +27,8 @@ public class AdminProviderService {
         this.registry = registry;
     }
 
+    public java.util.List<ProviderEntity> list() { return providers.findAll(); }
+
     @Transactional
     public ProviderEntity register(String id, String name, String type, String configRef, Long maxChunkBytes, Long maxObjectBytes) {
         if (providers.existsById(id)) throw new IllegalArgumentException("Provider id is already registered");

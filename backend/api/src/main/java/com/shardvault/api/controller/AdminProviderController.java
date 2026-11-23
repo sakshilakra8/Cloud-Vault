@@ -32,6 +32,9 @@ public class AdminProviderController {
             @Positive Long maxChunkBytes,
             @Positive Long maxObjectBytes) {}
 
+    @GetMapping
+    public java.util.List<ProviderEntity> list() { return service.list(); }
+
     @PostMapping
     public ProviderEntity register(@Valid @RequestBody RegisterProviderRequest request, Authentication auth, HttpServletRequest http) {
         ProviderEntity result = service.register(request.id(), request.name(), request.type(), request.configRef(), request.maxChunkBytes(), request.maxObjectBytes());

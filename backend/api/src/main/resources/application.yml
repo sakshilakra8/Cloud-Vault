@@ -14,6 +14,11 @@ spring:
       max-file-size: ${SHARDVAULT_MAX_FILE_SIZE:10GB}
       max-request-size: ${SHARDVAULT_MAX_REQUEST_SIZE:10GB}
       file-size-threshold: 0
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
 management:
   endpoints:
     web:
